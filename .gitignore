@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.sqlite3
+
+# Virtual env
+venv/
+.env
+
+# AI models
+models/
+*.bin
+
+# Flutter
+build/
+.dart_tool/
+
+# OS
+.DS_Store
