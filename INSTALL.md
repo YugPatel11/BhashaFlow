@@ -47,7 +47,7 @@ flutter pub get
 
 # IMPORTANT: Update the server URL in lib/main.dart
 # Change BASE_URL to your backend server's IP address:
-# const String BASE_URL = 'http://YOUR_PC_IP:8000';
+const String BASE_URL = 'http://10.92.177.63:8000';
 
 # Run the app
 flutter run

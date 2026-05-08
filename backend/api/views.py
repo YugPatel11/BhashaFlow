@@ -38,6 +38,15 @@ except ImportError as e:
     print(f"⚠️ Translation module not available: {e}")
     print("   Install with: pip install deep-translator")
 
+try:
+    from text_to_speech.tts import generate_audio
+    _tts_available = True
+    print("✅ TTS module loaded successfully.")
+except ImportError as e:
+    _tts_available = False
+    print(f"⚠️ TTS module not available: {e}")
+    print("   Install with: pip install gTTS")
+
 
 class LectureUploadView(APIView):
     """Upload a lecture audio file and trigger background processing."""
@@ -163,7 +172,7 @@ def _run_pipeline(lecture_pk):
             raise RuntimeError("STT produced empty transcript. Check audio file quality.")
 
         # Normalize detected language code
-        lang_map = {'gu': 'gu', 'hi': 'hi', 'en': 'en', 'ta': 'ta', 'mr': 'mr'}
+        lang_map = {'gu': 'gu', 'hi': 'hi', 'en': 'en', 'ta': 'ta', 'mr': 'mr', 'te': 'te'}
         db_lang = lang_map.get(detected_lang, 'en')
 
         print(f"   Detected language: {detected_lang} → stored as: {db_lang}")
@@ -181,10 +190,10 @@ def _run_pipeline(lecture_pk):
                 "Translation module not available. Install deep-translator: pip install deep-translator"
             )
 
-        print("\n🌍 Step 2/2: Translation...")
+        print("\n🌍 Step 2/3: Translation...")
 
         # Translate to all other supported languages
-        target_languages = [lang for lang in ['en', 'hi', 'gu'] if lang != db_lang]
+        target_languages = [lang for lang in ['en', 'hi', 'gu', 'mr', 'ta', 'te'] if lang != db_lang]
 
         translations = translate_text(
             transcript_text,
@@ -194,13 +203,43 @@ def _run_pipeline(lecture_pk):
 
         for lang_code, translated_text in translations.items():
             if not translated_text.startswith('[Translation failed'):
-                Transcript.objects.update_or_create(
+                transcript, _ = Transcript.objects.update_or_create(
                     lecture=lecture, language=lang_code,
                     defaults={'text': translated_text}
                 )
                 print(f"   ✅ Saved {lang_code} transcript")
+                
+                # ── Step 3: Text-to-Speech (Indented within loop) ──
+                if _tts_available:
+                    print(f"   🔊 Generating audio for {lang_code}...")
+                    from django.core.files import File
+                    temp_audio_name = f"tts_{lecture.id}_{lang_code}.mp3"
+                    temp_audio_path = os.path.join(PROJECT_ROOT, 'backend', 'media', 'temp', temp_audio_name)
+                    os.makedirs(os.path.dirname(temp_audio_path), exist_ok=True)
+                    
+                    if generate_audio(translated_text, lang_code, temp_audio_path):
+                        with open(temp_audio_path, 'rb') as f:
+                            transcript.audio_file.save(temp_audio_name, File(f), save=True)
+                        print(f"   ✅ Audio saved for {lang_code}")
+                        # Clean up temp file
+                        if os.path.exists(temp_audio_path):
+                            os.remove(temp_audio_path)
             else:
                 print(f"   ⚠️ Skipped {lang_code}: {translated_text}")
+
+        # Also generate audio for the original transcript if needed
+        original_transcript = Transcript.objects.filter(lecture=lecture, language=db_lang).first()
+        if original_transcript and not original_transcript.audio_file and _tts_available:
+             print(f"   🔊 Generating audio for original ({db_lang})...")
+             from django.core.files import File
+             temp_audio_name = f"tts_{lecture.id}_{db_lang}.mp3"
+             temp_audio_path = os.path.join(PROJECT_ROOT, 'backend', 'media', 'temp', temp_audio_name)
+             os.makedirs(os.path.dirname(temp_audio_path), exist_ok=True)
+             if generate_audio(original_transcript.text, db_lang, temp_audio_path):
+                 with open(temp_audio_path, 'rb') as f:
+                     original_transcript.audio_file.save(temp_audio_name, File(f), save=True)
+                 if os.path.exists(temp_audio_path):
+                     os.remove(temp_audio_path)
 
         # ── Done ──
         lecture.status = 'completed'

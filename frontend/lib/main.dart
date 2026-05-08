@@ -24,11 +24,63 @@ class BhashaFlowApp extends StatelessWidget {
       title: 'BhashaFlow',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorSchemeSeed: const Color(0xFF6750A4),
+        colorSchemeSeed: const Color(0xFFE0E5EC),
         useMaterial3: true,
-        brightness: Brightness.light,
+        scaffoldBackgroundColor: const Color(0xFFE0E5EC),
       ),
       home: const RoleSelectionScreen(),
+    );
+  }
+}
+
+// ── Neomorphic Helper ──────────────────────────────────────────
+
+class NeomorphicContainer extends StatelessWidget {
+  final Widget child;
+  final double padding;
+  final double borderRadius;
+  final bool isPressed;
+
+  const NeomorphicContainer({
+    super.key,
+    required this.child,
+    this.padding = 16.0,
+    this.borderRadius = 20.0,
+    this.isPressed = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(padding),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE0E5EC),
+        borderRadius: BorderRadius.circular(borderRadius),
+        boxShadow: isPressed
+            ? [
+                BoxShadow(
+                    color: Colors.white.withOpacity(0.8),
+                    offset: const Offset(-2, -2),
+                    blurRadius: 2,
+                    spreadRadius: 1),
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    offset: const Offset(2, 2),
+                    blurRadius: 2,
+                    spreadRadius: 1),
+              ]
+            : [
+                BoxShadow(
+                    color: Colors.white.withOpacity(0.9),
+                    offset: const Offset(-6, -6),
+                    blurRadius: 12),
+                BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    offset: const Offset(6, 6),
+                    blurRadius: 12),
+              ],
+      ),
+      child: child,
     );
   }
 }
@@ -41,38 +93,56 @@ class RoleSelectionScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('BhashaFlow'),
-        centerTitle: true,
-      ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.translate, size: 80, color: Color(0xFF6750A4)),
-            const SizedBox(height: 16),
-            const Text('Welcome to BhashaFlow',
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            const Text('Post-Class AI Transcript System',
-                style: TextStyle(fontSize: 14, color: Colors.grey)),
-            const SizedBox(height: 40),
-            FilledButton.icon(
-              onPressed: () => Navigator.push(
-                  context, MaterialPageRoute(builder: (_) => const TeacherScreen())),
-              icon: const Icon(Icons.school),
-              label: const Text('I am a Teacher'),
-              style: FilledButton.styleFrom(
-                  minimumSize: const Size(220, 50)),
+            const NeomorphicContainer(
+              padding: 24,
+              child: Icon(Icons.translate, size: 60, color: Color(0xFF2D3748)),
             ),
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: () => Navigator.push(
-                  context, MaterialPageRoute(builder: (_) => const StudentScreen())),
-              icon: const Icon(Icons.person),
-              label: const Text('I am a Student'),
-              style: OutlinedButton.styleFrom(
-                  minimumSize: const Size(220, 50)),
+            const SizedBox(height: 32),
+            const Text('BhashaFlow',
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.w900, color: Color(0xFF2D3748))),
+            const Text('AI Lecture Assistant',
+                style: TextStyle(fontSize: 14, color: Colors.blueGrey, letterSpacing: 1.2)),
+            const SizedBox(height: 60),
+            GestureDetector(
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const TeacherScreen())),
+              child: const NeomorphicContainer(
+                padding: 20,
+                borderRadius: 15,
+                child: SizedBox(
+                  width: 200,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.school, color: Color(0xFF2D3748)),
+                      SizedBox(width: 12),
+                      Text('I am a Teacher', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D3748))),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            GestureDetector(
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const StudentScreen())),
+              child: const NeomorphicContainer(
+                padding: 20,
+                borderRadius: 15,
+                child: SizedBox(
+                  width: 200,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.person, color: Color(0xFF2D3748)),
+                      SizedBox(width: 12),
+                      Text('I am a Student', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D3748))),
+                    ],
+                  ),
+                ),
+              ),
             ),
           ],
         ),
@@ -90,7 +160,7 @@ class TeacherScreen extends StatefulWidget {
 }
 
 class _TeacherScreenState extends State<TeacherScreen> {
-  String _status = 'Select a lecture audio to upload';
+  String _status = 'Upload audio to begin';
   bool _isUploading = false;
   String? _uploadedLectureStatus;
   int? _uploadedLectureId;
@@ -103,8 +173,7 @@ class _TeacherScreenState extends State<TeacherScreen> {
   }
 
   Future<void> _uploadAudio() async {
-    FilePickerResult? result =
-        await FilePicker.platform.pickFiles(type: FileType.audio);
+    FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.audio);
     if (result == null) return;
 
     setState(() {
@@ -115,12 +184,9 @@ class _TeacherScreenState extends State<TeacherScreen> {
     });
 
     try {
-      var request = http.MultipartRequest(
-          'POST', Uri.parse('$BASE_URL/api/lectures/upload/'));
+      var request = http.MultipartRequest('POST', Uri.parse('$BASE_URL/api/lectures/upload/'));
       request.fields['title'] = result.files.single.name;
-      request.files.add(await http.MultipartFile.fromPath(
-          'audio_file', result.files.single.path!));
-
+      request.files.add(await http.MultipartFile.fromPath('audio_file', result.files.single.path!));
       var response = await request.send();
       var body = await response.stream.bytesToString();
 
@@ -128,13 +194,12 @@ class _TeacherScreenState extends State<TeacherScreen> {
         var data = json.decode(body);
         _uploadedLectureId = data['id'];
         setState(() {
-          _status = 'Uploaded! Processing in background...';
+          _status = 'Processing in background...';
           _uploadedLectureStatus = 'processing';
         });
-        // Start polling for status
         _startPolling();
       } else {
-        setState(() => _status = 'Upload failed (${response.statusCode})');
+        setState(() => _status = 'Upload failed');
       }
     } catch (e) {
       setState(() => _status = 'Error: $e');
@@ -148,21 +213,18 @@ class _TeacherScreenState extends State<TeacherScreen> {
     _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
       if (_uploadedLectureId == null) return;
       try {
-        final resp = await http.get(
-            Uri.parse('$BASE_URL/api/lectures/$_uploadedLectureId/status/'));
+        final resp = await http.get(Uri.parse('$BASE_URL/api/lectures/$_uploadedLectureId/status/'));
         if (resp.statusCode == 200) {
           final data = json.decode(resp.body);
           final st = data['status'] as String;
           setState(() {
             _uploadedLectureStatus = st;
             if (st == 'completed') {
-              _status = '✅ Processing complete! Transcripts ready.';
+              _status = '✅ Processing complete!';
               _pollTimer?.cancel();
             } else if (st == 'failed') {
-              _status = '❌ Processing failed: ${data['error_message']}';
+              _status = '❌ Failed';
               _pollTimer?.cancel();
-            } else {
-              _status = '⏳ Processing... ($st)';
             }
           });
         }
@@ -173,40 +235,40 @@ class _TeacherScreenState extends State<TeacherScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Teacher Dashboard')),
+      appBar: AppBar(title: const Text('Teacher Dashboard'), backgroundColor: Colors.transparent),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
-                _uploadedLectureStatus == 'completed'
-                    ? Icons.check_circle
-                    : _uploadedLectureStatus == 'failed'
-                        ? Icons.error
-                        : Icons.cloud_upload_outlined,
-                size: 64,
-                color: _uploadedLectureStatus == 'completed'
-                    ? Colors.green
-                    : _uploadedLectureStatus == 'failed'
-                        ? Colors.red
-                        : const Color(0xFF6750A4),
-              ),
-              const SizedBox(height: 20),
-              if (_isUploading || _uploadedLectureStatus == 'processing')
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 16),
-                  child: CircularProgressIndicator(),
+              NeomorphicContainer(
+                padding: 40,
+                child: Icon(
+                  _uploadedLectureStatus == 'completed' ? Icons.check_circle : Icons.cloud_upload,
+                  size: 80,
+                  color: _uploadedLectureStatus == 'completed' ? Colors.green : const Color(0xFF2D3748),
                 ),
-              Text(_status,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(fontSize: 16)),
-              const SizedBox(height: 30),
-              FilledButton.icon(
-                onPressed: _isUploading ? null : _uploadAudio,
-                icon: const Icon(Icons.upload_file),
-                label: const Text('Upload Lecture Audio'),
+              ),
+              const SizedBox(height: 40),
+              if (_isUploading || _uploadedLectureStatus == 'processing')
+                const Padding(padding: EdgeInsets.only(bottom: 24), child: CircularProgressIndicator()),
+              Text(_status, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Color(0xFF2D3748))),
+              const SizedBox(height: 40),
+              GestureDetector(
+                onTap: _isUploading ? null : _uploadAudio,
+                child: NeomorphicContainer(
+                  borderRadius: 30,
+                  padding: 20,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add, color: const Color(0xFF2D3748)),
+                      const SizedBox(width: 8),
+                      const Text('Upload New Lecture', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D3748))),
+                    ],
+                  ),
+                ),
               ),
             ],
           ),
@@ -246,13 +308,12 @@ class _StudentScreenState extends State<StudentScreen> {
   Future<void> _fetchLectures() async {
     setState(() => _isLoading = true);
     try {
-      final response =
-          await http.get(Uri.parse('$BASE_URL/api/lectures/'));
+      final response = await http.get(Uri.parse('$BASE_URL/api/lectures/'));
       if (response.statusCode == 200) {
         setState(() => lectures = json.decode(response.body));
       }
     } catch (e) {
-      debugPrint('Error fetching lectures: $e');
+      debugPrint('Error: $e');
     } finally {
       setState(() => _isLoading = false);
     }
@@ -260,154 +321,109 @@ class _StudentScreenState extends State<StudentScreen> {
 
   Future<void> _loadTranscript(int lectureId) async {
     setState(() {
-      transcript = 'Loading transcript...';
+      transcript = 'Loading...';
       _isLoading = true;
     });
     try {
-      final response = await http.get(Uri.parse(
-          '$BASE_URL/api/lectures/$lectureId/transcript/$selectedLang/'));
+      final response = await http.get(Uri.parse('$BASE_URL/api/lectures/$lectureId/transcript/$selectedLang/'));
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         setState(() => transcript = data['text']);
         if (data['audio_url'] != null) {
-          await _audioPlayer
-              .play(UrlSource('$BASE_URL${data['audio_url']}'));
+          await _audioPlayer.play(UrlSource('$BASE_URL${data['audio_url']}'));
         }
       } else {
-        setState(() =>
-            transcript = 'Transcript not available for this language yet.');
+        setState(() => transcript = 'Not available yet.');
       }
     } catch (e) {
-      setState(() => transcript = 'Error loading transcript: $e');
+      setState(() => transcript = 'Error: $e');
     } finally {
       setState(() => _isLoading = false);
-    }
-  }
-
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'completed':
-        return Colors.green;
-      case 'processing':
-        return Colors.orange;
-      case 'failed':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  IconData _statusIcon(String status) {
-    switch (status) {
-      case 'completed':
-        return Icons.check_circle;
-      case 'processing':
-        return Icons.hourglass_top;
-      case 'failed':
-        return Icons.error;
-      default:
-        return Icons.schedule;
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Student Dashboard'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchLectures,
-            tooltip: 'Refresh',
-          )
-        ],
-      ),
+      appBar: AppBar(title: const Text('Student Dashboard'), backgroundColor: Colors.transparent),
       body: Column(
         children: [
-          // Language selector
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                const Text('Language: ',
-                    style: TextStyle(fontWeight: FontWeight.w500)),
-                const SizedBox(width: 10),
-                DropdownButton<String>(
-                  value: selectedLang,
-                  items: const [
-                    DropdownMenuItem(value: 'en', child: Text('English')),
-                    DropdownMenuItem(value: 'hi', child: Text('Hindi')),
-                    DropdownMenuItem(value: 'gu', child: Text('Gujarati')),
+            padding: const EdgeInsets.all(16),
+            child: NeomorphicContainer(
+              padding: 8,
+              borderRadius: 12,
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _langBtn('en', 'English'),
+                    const SizedBox(width: 8),
+                    _langBtn('hi', 'Hindi'),
+                    const SizedBox(width: 8),
+                    _langBtn('gu', 'Gujarati'),
+                    const SizedBox(width: 8),
+                    _langBtn('mr', 'Marathi'),
+                    const SizedBox(width: 8),
+                    _langBtn('ta', 'Tamil'),
+                    const SizedBox(width: 8),
+                    _langBtn('te', 'Telugu'),
                   ],
-                  onChanged: (val) =>
-                      setState(() { selectedLang = val!; transcript = ''; }),
                 ),
-              ],
+              ),
             ),
           ),
-          // Lecture list
-          if (_isLoading && lectures.isEmpty)
-            const Expanded(
-                child: Center(child: CircularProgressIndicator())),
           Expanded(
-            child: RefreshIndicator(
-              onRefresh: _fetchLectures,
-              child: ListView.builder(
-                itemCount: lectures.length,
-                itemBuilder: (ctx, i) {
-                  final lec = lectures[i];
-                  final st = lec['status'] ?? 'pending';
-                  return Card(
-                    margin: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 4),
-                    child: ListTile(
-                      leading: Icon(_statusIcon(st),
-                          color: _statusColor(st)),
-                      title: Text(lec['title']),
-                      subtitle: Text(
-                          'Status: ${st.toUpperCase()}  •  ${lec['created_at'].substring(0, 10)}'),
-                      trailing: st == 'completed'
-                          ? const Icon(Icons.arrow_forward_ios, size: 16)
-                          : null,
-                      onTap: st == 'completed'
-                          ? () => _loadTranscript(lec['id'])
-                          : null,
+            child: ListView.builder(
+              itemCount: lectures.length,
+              itemBuilder: (ctx, i) {
+                final lec = lectures[i];
+                final st = lec['status'] ?? 'pending';
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: GestureDetector(
+                    onTap: st == 'completed' ? () => _loadTranscript(lec['id']) : null,
+                    child: NeomorphicContainer(
+                      padding: 16,
+                      borderRadius: 15,
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(lec['title'], style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D3748))),
+                        subtitle: Text(st.toUpperCase(), style: TextStyle(color: st == 'completed' ? Colors.green : Colors.orange, fontWeight: FontWeight.bold)),
+                        trailing: Icon(st == 'completed' ? Icons.play_circle_fill : Icons.hourglass_empty, color: const Color(0xFF2D3748)),
+                      ),
                     ),
-                  );
-                },
-              ),
+                  ),
+                );
+              },
             ),
           ),
-          // Transcript display
           if (transcript.isNotEmpty)
-            Container(
+            Padding(
               padding: const EdgeInsets.all(16),
-              margin: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.grey[100],
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                    color: const Color(0xFF6750A4).withOpacity(0.3)),
-              ),
-              height: 250,
-              width: double.infinity,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Transcript (${selectedLang.toUpperCase()}):',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF6750A4))),
-                  const Divider(),
-                  Expanded(
-                      child: SingleChildScrollView(
-                          child: Text(transcript,
-                              style: const TextStyle(fontSize: 16)))),
-                ],
+              child: NeomorphicContainer(
+                borderRadius: 20,
+                child: SizedBox(
+                  height: 200,
+                  width: double.infinity,
+                  child: SingleChildScrollView(child: Text(transcript, style: const TextStyle(fontSize: 16, color: Color(0xFF2D3748)))),
+                ),
               ),
             )
         ],
+      ),
+    );
+  }
+
+  Widget _langBtn(String code, String label) {
+    bool isSel = selectedLang == code;
+    return GestureDetector(
+      onTap: () => setState(() { selectedLang = code; transcript = ''; }),
+      child: NeomorphicContainer(
+        padding: 10,
+        borderRadius: 10,
+        isPressed: isSel,
+        child: Text(label, style: TextStyle(fontWeight: isSel ? FontWeight.bold : FontWeight.normal)),
       ),
     );
   }

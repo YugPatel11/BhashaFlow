@@ -14,6 +14,7 @@ SUPPORTED_LANGUAGES = {
     'gu': 'gujarati',
     'ta': 'tamil',
     'mr': 'marathi',
+    'te': 'telugu',
 }
 
 
