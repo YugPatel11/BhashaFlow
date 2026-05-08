@@ -14,11 +14,27 @@ Before running `pip install`, you **must** install the Microsoft C++ Build Tools
 2. Run the installer and check the box for **"Desktop development with C++"**.
 3. Complete the installation and restart your computer.
 
+### Fix: SSL/Certificate Errors
+If persistent certificate errors occur, run these commands:
+```bash
+conda config --set ssl_verify false
+pip config set global.trusted-host "pypi.org files.pythonhosted.org pypi.python.org"
+```
+
+### Environment Setup
+Create and activate a new Conda environment to avoid version conflicts:
+```bash
+conda create -n bhashaflow python=3.11 -y
+conda activate bhashaflow
+```
+
 ## 3. Installation Steps per Phase
 
 ### Phase 1: Audio Recording
 ```bash
 cd audio_recording
+conda install -c conda-forge numpy=1.26.4 -y
+pip install sounddevice==0.4.6
 pip install -r requirements.txt
 python record.py
 ```
@@ -26,7 +42,7 @@ python record.py
 ### Phase 2: Speech-to-Text (faster-whisper)
 ```bash
 cd speech_to_text
-pip install -r requirements.txt
+pip install -r requirements.txt --trusted-host pypi.org --trusted-host files.pythonhosted.org
 python stt.py
 ```
 

@@ -61,7 +61,7 @@ class _TeacherScreenState extends State<TeacherScreen> {
     FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.audio);
     if (result != null) {
       setState(() => _status = 'Uploading...');
-      var request = http.MultipartRequest('POST', Uri.parse('http://127.0.0.1:8000/api/lectures/upload/'));
+      var request = http.MultipartRequest('POST', Uri.parse('http://10.92.177.63:8000/api/lectures/upload/'));
       request.fields['title'] = result.files.single.name;
       request.files.add(await http.MultipartFile.fromPath('audio_file', result.files.single.path!));
       
@@ -111,19 +111,19 @@ class _StudentScreenState extends State<StudentScreen> {
   }
 
   Future<void> _fetchLectures() async {
-    final response = await http.get(Uri.parse('http://127.0.0.1:8000/api/lectures/'));
+    final response = await http.get(Uri.parse('http://10.92.177.63:8000/api/lectures/'));
     if (response.statusCode == 200) {
       setState(() => lectures = json.decode(response.body));
     }
   }
 
   Future<void> _loadTranscript(int lectureId) async {
-    final response = await http.get(Uri.parse('http://127.0.0.1:8000/api/lectures/$lectureId/transcript/$selectedLang/'));
+    final response = await http.get(Uri.parse('http://10.92.177.63:8000/api/lectures/$lectureId/transcript/$selectedLang/'));
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       setState(() => transcript = data['text']);
       if (data['audio_url'] != null) {
-        await _audioPlayer.play(UrlSource('http://127.0.0.1:8000${data['audio_url']}'));
+        await _audioPlayer.play(UrlSource('http://10.92.177.63:8000${data['audio_url']}'));
       }
     } else {
       setState(() => transcript = 'Transcript not available for this language yet.');
