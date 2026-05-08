@@ -35,7 +35,7 @@ def translate_text(input_text, source_lang='gu', target_languages=None):
     if target_languages is None:
         target_languages = [lang for lang in SUPPORTED_LANGUAGES if lang != source_lang]
 
-    print(f"🌍 Starting Translation Pipeline (source: {source_lang})...")
+    print(f"Starting Translation Pipeline (source: {source_lang})...")
     start_time = time.time()
 
     results = {}
@@ -59,14 +59,14 @@ def translate_text(input_text, source_lang='gu', target_languages=None):
 
             translated_text = ' '.join(translated_chunks)
             results[tgt_lang] = translated_text
-            print(f"    ✅ Done ({len(translated_text)} chars)")
+            print(f"    Done ({len(translated_text)} chars)")
 
         except Exception as e:
-            print(f"    ❌ Error translating to {tgt_lang}: {e}")
+            print(f"    Error translating to {tgt_lang}: {e}")
             results[tgt_lang] = f"[Translation failed: {e}]"
 
     elapsed = time.time() - start_time
-    print(f"🏁 Translation completed in {elapsed:.2f} seconds.")
+    print(f"Translation completed in {elapsed:.2f} seconds.")
 
     # Optionally save to files
     os.makedirs("translations", exist_ok=True)

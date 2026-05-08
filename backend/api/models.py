@@ -10,6 +10,7 @@ class Lecture(models.Model):
 
     title = models.CharField(max_length=255)
     audio_file = models.FileField(upload_to='lectures/original/')
+    source_language = models.CharField(max_length=10, default='gu') # Default to Gujarati
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     error_message = models.TextField(blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)

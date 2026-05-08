@@ -8,7 +8,7 @@ def generate_audio(text, language_code, output_path):
     Supported codes: 'en', 'hi', 'gu'.
     """
     try:
-        print(f"🎙️ Generating TTS audio for language: {language_code}...")
+        print(f"Generating TTS audio for language: {language_code}...")
         start_time = time.time()
         
         # Create TTS object
@@ -18,10 +18,10 @@ def generate_audio(text, language_code, output_path):
         # Save to file
         tts.save(output_path)
         
-        print(f"✅ Audio generated in {time.time() - start_time:.2f} seconds.")
+        print(f"Audio generated in {time.time() - start_time:.2f} seconds.")
         return True
     except Exception as e:
-        print(f"❌ TTS Error: {e}")
+        print(f"TTS Error: {e}")
         return False
 
 if __name__ == "__main__":

@@ -11,5 +11,5 @@ class LectureSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Lecture
-        fields = ['id', 'title', 'audio_file', 'status', 'error_message', 'created_at', 'transcripts']
+        fields = ['id', 'title', 'audio_file', 'source_language', 'status', 'error_message', 'created_at', 'transcripts']
         read_only_fields = ['status', 'error_message']

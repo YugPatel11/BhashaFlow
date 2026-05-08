@@ -23,29 +23,26 @@ if PROJECT_ROOT not in sys.path:
 try:
     from speech_to_text.stt import generate_transcript
     _stt_available = True
-    print("✅ STT module loaded successfully.")
+    print("STT module loaded successfully.")
 except ImportError as e:
     _stt_available = False
-    print(f"⚠️ STT module not available: {e}")
-    print("   Install with: pip install faster-whisper")
+    print(f"Warning: STT module not available: {e}")
 
 try:
     from translation.translate import translate_text
     _translation_available = True
-    print("✅ Translation module loaded successfully.")
+    print("Translation module loaded successfully.")
 except ImportError as e:
     _translation_available = False
-    print(f"⚠️ Translation module not available: {e}")
-    print("   Install with: pip install deep-translator")
+    print(f"Warning: Translation module not available: {e}")
 
 try:
     from text_to_speech.tts import generate_audio
     _tts_available = True
-    print("✅ TTS module loaded successfully.")
+    print("TTS module loaded successfully.")
 except ImportError as e:
     _tts_available = False
-    print(f"⚠️ TTS module not available: {e}")
-    print("   Install with: pip install gTTS")
+    print(f"Warning: TTS module not available: {e}")
 
 
 class LectureUploadView(APIView):
@@ -148,6 +145,7 @@ def _run_pipeline(lecture_pk):
     try:
         lecture = Lecture.objects.get(pk=lecture_pk)
         audio_path = lecture.audio_file.path
+        source_lang = lecture.source_language
 
         # ── Update status to processing ──
         lecture.status = 'processing'
@@ -155,28 +153,25 @@ def _run_pipeline(lecture_pk):
         lecture.save()
 
         print(f"\n{'='*60}")
-        print(f"🔄 Processing lecture {lecture_pk}: {lecture.title}")
+        print(f"Processing lecture {lecture_pk}: {lecture.title}")
         print(f"   Audio: {audio_path}")
+        print(f"   Source Language: {source_lang}")
         print(f"{'='*60}")
 
         # ── Step 1: Speech-to-Text ──
         if not _stt_available:
-            raise RuntimeError(
-                "STT module not available. Install faster-whisper: pip install faster-whisper"
-            )
+            raise RuntimeError("STT module not available.")
 
-        print("\n📝 Step 1/2: Speech-to-Text...")
-        transcript_text, detected_lang = generate_transcript(audio_path)
+        print("\nStep 1/3: Speech-to-Text...")
+        # Use source_lang provided by the teacher for better accuracy
+        transcript_text, detected_lang = generate_transcript(audio_path, language=source_lang)
 
         if not transcript_text or not transcript_text.strip():
-            raise RuntimeError("STT produced empty transcript. Check audio file quality.")
+            raise RuntimeError("STT produced empty transcript.")
 
-        # Normalize detected language code
-        lang_map = {'gu': 'gu', 'hi': 'hi', 'en': 'en', 'ta': 'ta', 'mr': 'mr', 'te': 'te'}
-        db_lang = lang_map.get(detected_lang, 'en')
-
-        print(f"   Detected language: {detected_lang} → stored as: {db_lang}")
-        print(f"   Transcript length: {len(transcript_text)} characters")
+        # Store as selected source lang
+        db_lang = source_lang
+        print(f"   Transcript generated in: {db_lang}")
 
         # Save original transcript
         Transcript.objects.update_or_create(
@@ -186,14 +181,16 @@ def _run_pipeline(lecture_pk):
 
         # ── Step 2: Translation ──
         if not _translation_available:
-            raise RuntimeError(
-                "Translation module not available. Install deep-translator: pip install deep-translator"
-            )
+            raise RuntimeError("Translation module not available.")
 
-        print("\n🌍 Step 2/3: Translation...")
+        print("\nStep 2/3: Translation...")
 
-        # Translate to all other supported languages
-        target_languages = [lang for lang in ['en', 'hi', 'gu', 'mr', 'ta', 'te'] if lang != db_lang]
+        # Target languages: English first, then others
+        other_langs = [lang for lang in ['hi', 'gu', 'mr', 'ta', 'te'] if lang != db_lang and lang != 'en']
+        target_languages = []
+        if db_lang != 'en':
+            target_languages.append('en')
+        target_languages.extend(other_langs)
 
         translations = translate_text(
             transcript_text,
@@ -201,17 +198,18 @@ def _run_pipeline(lecture_pk):
             target_languages=target_languages
         )
 
-        for lang_code, translated_text in translations.items():
-            if not translated_text.startswith('[Translation failed'):
-                transcript, _ = Transcript.objects.update_or_create(
+        for lang_code in target_languages:
+            translated_text = translations.get(lang_code)
+            if translated_text and not translated_text.startswith('[Translation failed'):
+                transcript_obj, _ = Transcript.objects.update_or_create(
                     lecture=lecture, language=lang_code,
                     defaults={'text': translated_text}
                 )
-                print(f"   ✅ Saved {lang_code} transcript")
+                print(f"   Saved {lang_code} transcript")
                 
-                # ── Step 3: Text-to-Speech (Indented within loop) ──
+                # ── Step 3: Text-to-Speech ──
                 if _tts_available:
-                    print(f"   🔊 Generating audio for {lang_code}...")
+                    print(f"   Generating audio for {lang_code}...")
                     from django.core.files import File
                     temp_audio_name = f"tts_{lecture.id}_{lang_code}.mp3"
                     temp_audio_path = os.path.join(PROJECT_ROOT, 'backend', 'media', 'temp', temp_audio_name)
@@ -219,18 +217,17 @@ def _run_pipeline(lecture_pk):
                     
                     if generate_audio(translated_text, lang_code, temp_audio_path):
                         with open(temp_audio_path, 'rb') as f:
-                            transcript.audio_file.save(temp_audio_name, File(f), save=True)
-                        print(f"   ✅ Audio saved for {lang_code}")
-                        # Clean up temp file
+                            transcript_obj.audio_file.save(temp_audio_name, File(f), save=True)
+                        print(f"   Audio saved for {lang_code}")
                         if os.path.exists(temp_audio_path):
                             os.remove(temp_audio_path)
             else:
-                print(f"   ⚠️ Skipped {lang_code}: {translated_text}")
+                print(f"   Skipped or failed {lang_code}")
 
-        # Also generate audio for the original transcript if needed
+        # Audio for original
         original_transcript = Transcript.objects.filter(lecture=lecture, language=db_lang).first()
         if original_transcript and not original_transcript.audio_file and _tts_available:
-             print(f"   🔊 Generating audio for original ({db_lang})...")
+             print(f"   Generating audio for original ({db_lang})...")
              from django.core.files import File
              temp_audio_name = f"tts_{lecture.id}_{db_lang}.mp3"
              temp_audio_path = os.path.join(PROJECT_ROOT, 'backend', 'media', 'temp', temp_audio_name)
@@ -243,24 +240,19 @@ def _run_pipeline(lecture_pk):
 
         # ── Done ──
         lecture.status = 'completed'
-        lecture.error_message = ''
         lecture.save()
-
-        print(f"\n🎉 Lecture {lecture_pk} processed successfully!")
-        print(f"{'='*60}\n")
+        print(f"\nLecture {lecture_pk} processed successfully!")
 
     except Exception as e:
         error_msg = f"{type(e).__name__}: {str(e)}"
-        print(f"\n❌ Pipeline failed for lecture {lecture_pk}: {error_msg}")
+        print(f"\nPipeline failed for lecture {lecture_pk}: {error_msg}")
         traceback.print_exc()
-
         try:
             lecture = Lecture.objects.get(pk=lecture_pk)
             lecture.status = 'failed'
             lecture.error_message = error_msg
             lecture.save()
-        except Exception:
+        except:
             pass
-
     finally:
         connection.close()

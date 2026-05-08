@@ -52,7 +52,7 @@ def _get_model(model_size=None):
     return _model
 
 
-def generate_transcript(audio_path, model_size=None):
+def generate_transcript(audio_path, model_size=None, language=None):
     """
     Converts audio to text using faster-whisper.
     Returns tuple: (transcript_text, detected_language_code)
@@ -62,13 +62,14 @@ def generate_transcript(audio_path, model_size=None):
 
     model = _get_model(model_size)
 
-    print(f"🎙️ Transcribing: {os.path.basename(audio_path)}...")
+    print(f"Transcribing: {os.path.basename(audio_path)}...")
     start = time.time()
 
-    segments, info = model.transcribe(audio_path, beam_size=5)
+    # Transcribe the audio
+    segments, info = model.transcribe(audio_path, beam_size=5, language=language)
 
     detected_lang = info.language
-    print(f"🔍 Detected language: {detected_lang} (confidence: {info.language_probability:.2f})")
+    print(f"Language: {detected_lang} (confidence: {info.language_probability:.2f})")
 
     transcript_text = ""
     for segment in segments:

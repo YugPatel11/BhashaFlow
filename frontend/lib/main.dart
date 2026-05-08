@@ -165,6 +165,16 @@ class _TeacherScreenState extends State<TeacherScreen> {
   String? _uploadedLectureStatus;
   int? _uploadedLectureId;
   Timer? _pollTimer;
+  String _selectedSourceLang = 'gu'; // Default to Gujarati
+
+  final Map<String, String> _languages = {
+    'gu': 'Gujarati',
+    'hi': 'Hindi',
+    'en': 'English',
+    'mr': 'Marathi',
+    'ta': 'Tamil',
+    'te': 'Telugu',
+  };
 
   @override
   void dispose() {
@@ -186,6 +196,7 @@ class _TeacherScreenState extends State<TeacherScreen> {
     try {
       var request = http.MultipartRequest('POST', Uri.parse('$BASE_URL/api/lectures/upload/'));
       request.fields['title'] = result.files.single.name;
+      request.fields['source_language'] = _selectedSourceLang;
       request.files.add(await http.MultipartFile.fromPath('audio_file', result.files.single.path!));
       var response = await request.send();
       var body = await response.stream.bytesToString();
@@ -250,6 +261,25 @@ class _TeacherScreenState extends State<TeacherScreen> {
                   color: _uploadedLectureStatus == 'completed' ? Colors.green : const Color(0xFF2D3748),
                 ),
               ),
+              const SizedBox(height: 30),
+              
+              // Language Selection Dropdown
+              const Text('Select Speaking Language:', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF2D3748))),
+              const SizedBox(height: 10),
+              NeomorphicContainer(
+                padding: 4,
+                borderRadius: 12,
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _selectedSourceLang,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    borderRadius: BorderRadius.circular(12),
+                    items: _languages.entries.map((e) => DropdownMenuItem(value: e.key, child: Text(e.value))).toList(),
+                    onChanged: _isUploading ? null : (val) => setState(() => _selectedSourceLang = val!),
+                  ),
+                ),
+              ),
+              
               const SizedBox(height: 40),
               if (_isUploading || _uploadedLectureStatus == 'processing')
                 const Padding(padding: EdgeInsets.only(bottom: 24), child: CircularProgressIndicator()),
