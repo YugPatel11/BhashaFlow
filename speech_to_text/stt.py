@@ -10,19 +10,23 @@ def generate_transcript(audio_path):
     print("🚀 Loading faster-whisper model (large-v3) on GPU...")
     start_load = time.time()
     
-    # Load model once with CUDA and float16 precision (as per project.md)
+    # Load model with automatic device selection (GPU if available, else CPU)
+    import torch
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    compute_type = "float16" if device == "cuda" else "int8"
+    
     model = WhisperModel(
         "large-v3", 
-        device="cuda", 
-        compute_type="float16"
+        device=device, 
+        compute_type=compute_type
     )
     print(f"✅ Model loaded in {time.time() - start_load:.2f} seconds.")
 
     print(f"🎙️ Transcribing audio: {audio_path}...")
     start_transcribe = time.time()
     
-    # Transcribe the audio
-    segments, info = model.transcribe(audio_path, beam_size=5, language="gu")
+    # Transcribe the audio (removed hardcoded language="gu")
+    segments, info = model.transcribe(audio_path, beam_size=5)
 
     print(f"🔍 Detected language: {info.language} with probability {info.language_probability:.2f}")
 
@@ -42,7 +46,7 @@ def generate_transcript(audio_path):
         f.write(transcript_text.strip())
         
     print(f"💾 Transcript saved successfully to: {os.path.abspath(output_file)}")
-    return transcript_text.strip()
+    return transcript_text.strip(), info.language
 
 if __name__ == "__main__":
     print("=== BhashaFlow STT Engine (Phase 2) ===")

@@ -13,15 +13,19 @@ def translate_text(input_text, source_lang="guj_Gujr", target_languages=["hin_De
     # Using the indic-indic model for regional languages and indic-en for English
     # Note: For a production app, these models should be loaded once globally
     
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    
     # We load indic-indic for Guj -> Hindi/Marathi/Tamil
     model_name_indic = "ai4bharat/indictrans2-indic-indic-1B"
     tokenizer_indic = AutoTokenizer.from_pretrained(model_name_indic, trust_remote_code=True)
-    model_indic = AutoModelForSeq2SeqLM.from_pretrained(model_name_indic, trust_remote_code=True).cuda().half()
+    model_indic = AutoModelForSeq2SeqLM.from_pretrained(model_name_indic, trust_remote_code=True).to(device)
+    if device == "cuda": model_indic = model_indic.half()
     
     # We load indic-en for Guj -> English
     model_name_en = "ai4bharat/indictrans2-indic-en-1B"
     tokenizer_en = AutoTokenizer.from_pretrained(model_name_en, trust_remote_code=True)
-    model_en = AutoModelForSeq2SeqLM.from_pretrained(model_name_en, trust_remote_code=True).cuda().half()
+    model_en = AutoModelForSeq2SeqLM.from_pretrained(model_name_en, trust_remote_code=True).to(device)
+    if device == "cuda": model_en = model_en.half()
 
     print(f"✅ Models loaded in {time.time() - start_load:.2f} seconds.")
 
@@ -41,7 +45,7 @@ def translate_text(input_text, source_lang="guj_Gujr", target_languages=["hin_De
             model = model_indic
 
         # Tokenize and format the input
-        batch = tokenizer([input_text], src_lang=source_lang, tgt_lang=tgt_lang, return_tensors="pt").to("cuda")
+        batch = tokenizer([input_text], src_lang=source_lang, tgt_lang=tgt_lang, return_tensors="pt").to(device)
         
         # Generate translation
         with torch.inference_mode():
