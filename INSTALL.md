@@ -1,78 +1,88 @@
-# BhashaFlow Setup & Installation Guide
+# BhashaFlow – Setup Guide
 
-This guide contains all the prerequisites and instructions needed to run BhashaFlow on a new computer.
+## Prerequisites
 
-## 1. System Requirements
-- **OS:** Windows / Linux
-- **GPU:** NVIDIA GPU with CUDA support is highly recommended for Speech-to-Text and Translation.
-- **Python:** Python 3.10 or 3.11 recommended.
+- Python 3.10+ 
+- Flutter SDK 3.0+
+- Internet connection (for Google Translate API and Whisper model download)
 
-## 2. Essential Prerequisites (Must Install First!)
-Before running `pip install`, you **must** install the Microsoft C++ Build Tools on Windows. Some audio libraries require it to compile successfully.
+---
 
-1. Download **Microsoft C++ Build Tools**: [https://visualstudio.microsoft.com/visual-cpp-build-tools/](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
-2. Run the installer and check the box for **"Desktop development with C++"**.
-3. Complete the installation and restart your computer.
+## 1. Backend Setup
 
-### Fix: SSL/Certificate Errors
-If persistent certificate errors occur, run these commands:
-```bash
-conda config --set ssl_verify false
-pip config set global.trusted-host "pypi.org files.pythonhosted.org pypi.python.org"
-```
-
-### Environment Setup
-Create and activate a new Conda environment to avoid version conflicts:
-```bash
-conda create -n bhashaflow python=3.11 -y
-conda activate bhashaflow
-```
-
-## 3. Installation Steps per Phase
-
-### Phase 1: Audio Recording
-```bash
-cd audio_recording
-conda install -c conda-forge numpy=1.26.4 -y
-pip install sounddevice==0.4.6
-pip install -r requirements.txt
-python record.py
-```
-
-### Phase 2: Speech-to-Text (faster-whisper)
-```bash
-cd speech_to_text
-pip install -r requirements.txt --trusted-host pypi.org --trusted-host files.pythonhosted.org
-python stt.py
-```
-
-### Phase 3: Translation (IndicTrans2)
-```bash
-cd translation
-pip install -r requirements.txt
-python translate.py
-```
-
-### Phase 4: Text-to-Speech (Coqui XTTS v2)
-```bash
-cd text_to_speech
-pip install -r requirements.txt
-python tts.py
-```
-
-### Phase 6: Backend API Server
 ```bash
 cd backend
+
+# Install Python dependencies
 pip install -r requirements.txt
-python manage.py runserver
+
+# Create database tables (IMPORTANT - must do this first!)
+python manage.py migrate
+
+# Start the server (use your machine's IP so the Flutter app can reach it)
+python manage.py runserver 0.0.0.0:8000
 ```
 
-### Phase 7: Flutter App
-1. Install Flutter: [flutter.dev](https://docs.flutter.dev/get-started/install)
-2. Run the following commands:
+### Environment Variables (Optional)
+
+| Variable | Default | Description |
+|---|---|---|
+| `WHISPER_MODEL_SIZE` | `base` | Whisper model size. Options: `tiny`, `base`, `small`, `medium`, `large-v3`. Larger = more accurate but slower and needs more RAM/VRAM. |
+
+Example:
+```bash
+set WHISPER_MODEL_SIZE=large-v3
+python manage.py runserver 0.0.0.0:8000
+```
+
+---
+
+## 2. Flutter Frontend Setup
+
 ```bash
 cd frontend
-flutter create .
+
+# Install Flutter dependencies
 flutter pub get
+
+# IMPORTANT: Update the server URL in lib/main.dart
+# Change BASE_URL to your backend server's IP address:
+# const String BASE_URL = 'http://YOUR_PC_IP:8000';
+
+# Run the app
 flutter run
 ```
+
+---
+
+## 3. How It Works
+
+1. **Teacher** uploads a lecture audio file (.m4a, .wav, .mp3, etc.)
+2. **Backend** automatically processes it in the background:
+   - Speech-to-Text (faster-whisper) → detects language and transcribes
+   - Translation (Google Translate) → translates to English, Hindi, Gujarati
+3. **Student** opens the app, selects a language, and reads the transcript
+
+---
+
+## 4. API Endpoints
+
+| Method | URL | Description |
+|---|---|---|
+| POST | `/api/lectures/upload/` | Upload audio + start processing |
+| GET | `/api/lectures/` | List all lectures with status |
+| GET | `/api/lectures/<id>/status/` | Check processing status |
+| POST | `/api/lectures/<id>/process/` | Re-trigger processing |
+| GET | `/api/lectures/<id>/transcript/<lang>/` | Get transcript (lang: en, hi, gu) |
+
+---
+
+## 5. Troubleshooting
+
+| Problem | Solution |
+|---|---|
+| `no such table: api_lecture` | Run `python manage.py migrate` |
+| Translation not happening | Check server console for errors. Make sure `deep-translator` is installed. |
+| STT fails | Make sure `faster-whisper` is installed. First run downloads the Whisper model (~150MB for base). |
+| Flutter can't connect | Update `BASE_URL` in `lib/main.dart` to your server IP. Make sure both devices are on the same network. |
+| Lecture stuck on "processing" | Check the Django server terminal for error logs. Re-trigger with POST to `/api/lectures/<id>/process/`. |

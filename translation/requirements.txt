@@ -1,5 +1,1 @@
-torch>=2.0.0
-transformers>=4.41.0
-sentencepiece>=0.2.0
-sacremoses>=0.0.53
-accelerate>=0.24.1
+deep-translator>=1.11

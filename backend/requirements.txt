@@ -1,2 +1,5 @@
-djangorestframework==3.15.1
-django-cors-headers==4.3.1
+django>=5.0
+djangorestframework>=3.14
+django-cors-headers>=4.3
+faster-whisper>=1.0
+deep-translator>=1.11
